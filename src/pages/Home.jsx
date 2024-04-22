@@ -1,12 +1,55 @@
-import React from 'react'
-import { Link } from 'react-router-dom'
+import React, { useEffect, useState } from 'react'
+import { Link, useNavigate } from 'react-router-dom'
 import ProjectCard from '../components/ProjectCard'
 import LandingImg from '../assets/admin1.png'
 import { Card } from 'react-bootstrap'
+import 'react-toastify/dist/ReactToastify.css';
+import { ToastContainer, toast } from 'react-toastify';
+import {getHomeProjectsAPI} from '../services/allAPI'
 
 
 
 function Home() {
+    //state for holding projects
+    const [homeProjects,setHomeProjects] = useState([])
+
+    const navigate = useNavigate()
+    //state for conditional rendering from start to explore to dashboard
+    const [loginStatus,setLoginStatus] = useState(false)
+    console.log(homeProjects);
+
+    useEffect(()=>{
+        //to see when the component loaded
+        getHomeProjects()
+        if(sessionStorage.getItem("token")){
+            setLoginStatus(true)
+        }else{
+            setLoginStatus(false)
+        }
+    },[])
+
+    //handleProject
+    const handleProject = ()=>{
+        if(loginStatus){
+            navigate('/projects')
+        }else{
+            toast.warning("Please login to get full access to our projects")
+        }
+    }
+
+    //api call for homeProjects
+    const getHomeProjects = async ()=>{
+        try{
+            const result = await getHomeProjectsAPI()
+            console.log(result);
+            if(result.status==200){
+                setHomeProjects(result.data)
+            }
+        }catch(err){
+            console.log(err);
+        }
+    }
+
   return (
     <>
     {/* landing part */}
@@ -17,7 +60,12 @@ function Home() {
                         <h1 style={{fontSize:'80px'}}> <i className='fa-brands fa-docker me-2'></i>
                             Project Fair</h1>
                         <p>Lorem ipsum dolor sit amet, consectetur adipisicing elit. Id et voluptates suscipit aliquam officia natus quos nesciunt aspernatur, earum minus ipsa sequi nisi vel culpa enim? Vero quidem quasi veritatis.</p>
-                        <Link to={'/login'} className='btn btn-warning'>Start to Explore <i className="fa-solid fa-arrow-right ms-2"></i></Link>
+                        {   
+                            loginStatus ?
+                            <Link to={'/dashboard'} className='btn btn-warning'>Manage Your Projects <i className="fa-solid fa-arrow-right ms-2"></i></Link> 
+                            :
+                            <Link to={'/login'} className='btn btn-warning'>Start to Explore <i className="fa-solid fa-arrow-right ms-2"></i></Link>
+                        }
                     </div>
                     
                     <div className="col-lg-6">
@@ -33,12 +81,16 @@ function Home() {
             <h1 className='text-center mb-5 fw-bolder'>Explore Our Projects</h1>
             <marquee>
                 <div className='d-flex mb-5 '>
-                    <div className='me-5'>
-                        <ProjectCard/>
+                    {   homeProjects?.length>0 &&
+                     homeProjects?.map(project=>(
+                        <div key={project} className='me-5'>
+                        <ProjectCard displayData={project}/>
                     </div>
+                     )) 
+                    }
                 </div>
             </marquee>
-            <button className='btn btn-link mt-3'>Click here to view more projects...</button>
+            <button onClick={handleProject} className='btn btn-link mt-3'>Click here to view more projects...</button>
         </div>
 
         {/* testimonials */}
@@ -103,6 +155,7 @@ function Home() {
             </Card>
             </div>
         </div>
+        <ToastContainer position='top-center' theme='colored' autoClose={3000} />
     </>
   )
 }

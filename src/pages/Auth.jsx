@@ -1,14 +1,20 @@
-import React, { useState } from 'react'
-import { Link } from 'react-router-dom'
+import React, { useContext, useState } from 'react'
+import { Link, useNavigate } from 'react-router-dom'
 import LoginImg from '../assets/login.png'
 import { FloatingLabel, Form } from 'react-bootstrap'
 import 'react-toastify/dist/ReactToastify.css';
 import { ToastContainer, toast } from 'react-toastify';
+import { loginAPI, registerAPI } from '../services/allAPI';
+import { tokenAuthContext } from '../contexts/TokenAuth';
 
 
 
 
 function Auth({insideRegister}) {
+  //using context from tokenAuth
+  const {isAuthorised,setIsAuthorised} = useContext(tokenAuthContext)
+
+  const navigate = useNavigate()
 
   //state to store user creating datas
   const[userInputs,setUserInputs] = useState({
@@ -16,13 +22,62 @@ function Auth({insideRegister}) {
   })
   console.log(userInputs);
 
-  const handleRegister = (e) =>{
+  //register
+  const handleRegister = async (e) =>{
     e.preventDefault()
     //text fied empty checking
     if(userInputs.username && userInputs.email && userInputs.password){
       //api call
+      try{
+        const result = await registerAPI(userInputs)
+        console.log(result);
+        if(result.status==200){
+          toast.success(`Welcome ${result.data.username}... Please Login to explore more!!!`)
+          setUserInputs({username:"",email:"",password:""})
+          setTimeout(()=>{
+            navigate('/login')
+          },2000)
+        }else{
+          toast.error(result.response.data)
+          setTimeout(()=>{
+            setUserInputs({username:"",email:"",password:""})
+          },2000)
+        }
+      }catch(err){
+          console.log(err);
+      }
+
     }else{
       toast.warning("Please fill the form completely...")
+    }
+  }
+
+  //login
+  const handleLogin = async (e) =>{
+    e.preventDefault()
+    if(userInputs.email && userInputs.password){
+      //api call
+      try{
+        const result = await loginAPI(userInputs)
+        if(result.status==200){
+          //store existing user and token
+          sessionStorage.setItem("existingUser",JSON.stringify(result.data.existingUser))
+          sessionStorage.setItem("token",result.data.token)
+          //after getting token only set authorisation
+          setIsAuthorised(true)
+          toast.success(`Welcome ${result.data.existingUser.username}...`)
+          setUserInputs({email:"",password:""})
+          setTimeout(()=>{
+            navigate('/')
+          },2000)
+        }else{
+          toast.error(result.response.data)
+        }
+      }catch(err){
+        console.log(err);
+      }
+    }else{
+      toast.warning("Please fill the form completely!!!")
     }
   }
 
@@ -75,7 +130,7 @@ function Auth({insideRegister}) {
                   </div>
                   :
                   <div className='mt-3'>
-                    <button className='btn btn-primary mb-2'>Login</button>
+                    <button onClick={handleLogin} className='btn btn-primary mb-2'>Login</button>
                     <p>New User? Click here to <Link to={'/register'}>Register</Link></p>
                   </div>
                 }
